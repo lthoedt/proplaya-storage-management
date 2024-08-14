@@ -1,0 +1,4 @@
+enum StorageTypes {
+  playlist,
+  song,
+}
