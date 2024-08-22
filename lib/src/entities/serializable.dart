@@ -6,7 +6,7 @@ import 'package:proplaya_storage_management/src/def/storage_types.dart';
 abstract class Serializable {
   final String id;
   final String url;
-  final bool? downloaded;
+  bool? downloaded;
   abstract final StorageTypes type;
   final List<Serializable>? children;
 

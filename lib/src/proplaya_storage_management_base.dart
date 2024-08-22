@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -7,6 +6,7 @@ import 'package:proplaya_storage_management/src/def/batch_sizes.dart';
 import 'dart:async';
 import 'package:proplaya_storage_management/src/def/storage_paths.dart';
 import 'package:proplaya_storage_management/src/entities/serializable.dart';
+import 'package:proplaya_storage_management/src/helpers/batch_handler.dart';
 
 class ProplayaStorageManagement {
   String? _basePath;
@@ -22,14 +22,24 @@ class ProplayaStorageManagement {
 
   // TODO: Error handling.
   /// Downloads the item and its children.
-  Future<void> download(Serializable item) async {
+  Future<bool?> download(Serializable item) async {
+    /// Sets the download status according to the downloaded content.
+    /// null: No content to download.
+    /// true: Content downloaded.
+    /// false: Content failed to download.
+    final downloaded = await _downloadContent(item);
+    item.downloaded = downloaded;
+
+    if (item.children != null) {
+      final allDownloaded = await _downloadAsBatch(item.children!, item);
+      if (allDownloaded != null) {
+        item.downloaded = (allDownloaded) ? item.downloaded ?? true : false;
+      }
+    }
+
     await _downloadItem(item);
 
-    await _downloadContent(item);
-
-    if (item.children == null) return;
-
-    await _downloadAsBatch(item.children!, item);
+    return item.downloaded;
   }
 
   /// Serializes @item to a json file.
@@ -47,7 +57,7 @@ class ProplayaStorageManagement {
   }
 
   /// Downloads the content of an item.
-  Future<void> _downloadContent(Serializable item) async {
+  Future<bool?> _downloadContent(Serializable item) async {
     // Downloads the corresponding data.
     // Example: If item is a song, download the audio.
     final downloadingFile = item.download(
@@ -59,57 +69,47 @@ class ProplayaStorageManagement {
 
     if (downloadingFile is Future) {
       print("Downloading ${item.id}...");
-      await downloadingFile;
+      try {
+        await downloadingFile;
+      } catch (e) {
+        print(e);
+        print("Failed to download ${item.id}.");
+        return false;
+      }
       print("Downloaded ${item.id}.");
-      return; // If the item as a file to downloaded, then its children are not downloaded. (as they shouldnt exist)
+      return true; // If the item as a file to downloaded, then its children are not downloaded. (as they shouldnt exist)
     }
+    return null;
   }
 
   /// Downloads the items.
   /// Stores references to those at the parent.
-  Future<void> _downloadAsBatch<T extends Serializable>(
+  Future<bool?> _downloadAsBatch<T extends Serializable>(
     List<T> items,
     Serializable parent,
   ) async {
     final int batchSize = getBatchsizeOf(parent.type);
-    File? batchfile;
-    Map<String, String>? batch; // {index: id} (jsonEncode doesnt like int keys)
 
     final String batchPath = p.join(
       await basePath,
       getContentPath(parent),
     );
 
-    // Downloads the children of the item.
-    for (final iv in items.indexed) {
-      final index = iv.$1;
-      final child = iv.$2;
+    final BatchHandler batchHandler = BatchHandler(
+      batchSize: batchSize,
+      batchPath: batchPath,
+    );
 
-      /// After every batch is full.
-      if (index % batchSize == 0) {
-        batchfile = File(
-          p.setExtension(
-            p.join(
-              batchPath,
-              "${index / batchSize}",
-            ),
-            ".json",
-          ),
-        );
-        if (await batchfile.exists()) {
-          batch = Map.castFrom(jsonDecode(await batchfile.readAsString()));
-        } else {
-          await batchfile.create(recursive: true);
-          batch = {};
-        }
+    bool? allDownloaded;
+
+    await batchHandler.handle(items, (item) async {
+      final downloaded = await download(item);
+      if (downloaded != null) {
+        allDownloaded = (downloaded) ? allDownloaded ?? true : false;
       }
-      await download(child);
-      batch!["$index"] = child.id;
-      // Writes the current batch to the batchfile. (if it is full or if it is the last batch)
-      if (index % batchSize == batchSize - 1 || index == items.length - 1) {
-        await batchfile!.writeAsString(jsonEncode(batch));
-        batch = null;
-      }
-    }
+      return item.id;
+    });
+
+    return allDownloaded;
   }
 }
