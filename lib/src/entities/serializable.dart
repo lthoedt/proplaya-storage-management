@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:proplaya_storage_management/src/def/storage_types.dart';
 
-abstract class Serializable<T> {
+abstract class Serializable {
   final String id;
   final String url;
   final bool? downloaded;
