@@ -65,13 +65,15 @@ class ProplayaStorageManagement {
     }
   }
 
+  /// Downloads the items.
+  /// Stores references to those at the parent.
   Future<void> _downloadAsBatch<T extends Serializable>(
     List<T> items,
     Serializable parent,
   ) async {
     final int batchSize = getBatchsizeOf(parent.type);
     File? batchfile;
-    Map<String, String>? batch; // Index: id (jsonEncode doesnt like int keys)
+    Map<String, String>? batch; // {index: id} (jsonEncode doesnt like int keys)
 
     final String batchPath = p.join(
       await basePath,
@@ -82,6 +84,8 @@ class ProplayaStorageManagement {
     for (final iv in items.indexed) {
       final index = iv.$1;
       final child = iv.$2;
+
+      /// After every batch is full.
       if (index % batchSize == 0) {
         batchfile = File(
           p.setExtension(
@@ -101,7 +105,7 @@ class ProplayaStorageManagement {
       }
       await download(child);
       batch!["$index"] = child.id;
-      // Writes the current batch to the batchfile.
+      // Writes the current batch to the batchfile. (if it is full or if it is the last batch)
       if (index % batchSize == batchSize - 1 || index == items.length - 1) {
         await batchfile!.writeAsString(jsonEncode(batch));
         batch = null;
