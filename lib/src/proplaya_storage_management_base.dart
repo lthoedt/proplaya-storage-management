@@ -32,9 +32,7 @@ class ProplayaStorageManagement {
 
     if (item.children != null) {
       final allDownloaded = await _downloadAsBatch(item.children!, item);
-      if (allDownloaded != null) {
-        item.downloaded = (allDownloaded) ? item.downloaded ?? true : false;
-      }
+      item.downloaded = getDownloadedStatus(item.downloaded, allDownloaded);
     }
 
     // This has to be done last so that all fields are updated.
@@ -107,12 +105,22 @@ class ProplayaStorageManagement {
 
     await batchHandler.handle(items, (item) async {
       final downloaded = await download(item);
-      if (downloaded != null) {
-        allDownloaded = (downloaded) ? allDownloaded ?? true : false;
-      }
+      allDownloaded = getDownloadedStatus(allDownloaded, downloaded);
       return item.id;
     });
 
     return allDownloaded;
   }
+
+  /// If @newDownloaded == null, @returns @oldDownloaded.
+  ///
+  /// If @newDownloaded == true, @returns oldDownloaded unless that is null then true is returned.
+  ///
+  /// If @newDownloaded == false, @returns false.
+  bool? getDownloadedStatus(bool? oldDownloaded, bool? newDownloaded) =>
+      (newDownloaded != null)
+          ? (newDownloaded)
+              ? oldDownloaded ?? true
+              : false
+          : oldDownloaded;
 }

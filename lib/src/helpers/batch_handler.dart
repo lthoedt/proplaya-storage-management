@@ -20,6 +20,7 @@ class BatchHandler {
   File? batchfile;
   Map<String, String>? batch; // {index: id} (jsonEncode doesnt like int keys)
 
+  /// Batches the items and places links to the batchfiles in the parent.
   Future<void> handle<T>(
     List<T> items,
     Future<String> Function(T item) handle,
