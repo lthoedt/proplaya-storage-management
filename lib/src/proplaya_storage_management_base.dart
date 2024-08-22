@@ -37,6 +37,7 @@ class ProplayaStorageManagement {
       }
     }
 
+    // This has to be done last so that all fields are updated.
     await _downloadItem(item);
 
     return item.downloaded;
@@ -89,6 +90,8 @@ class ProplayaStorageManagement {
     Serializable parent,
   ) async {
     final int batchSize = getBatchsizeOf(parent.type);
+
+    parent.batchSize = batchSize;
 
     final String batchPath = p.join(
       await basePath,

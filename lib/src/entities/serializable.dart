@@ -9,6 +9,7 @@ abstract class Serializable {
   bool? downloaded;
   abstract final StorageTypes type;
   final List<Serializable>? children;
+  int? batchSize;
 
   Serializable({
     required this.id,
@@ -23,6 +24,7 @@ abstract class Serializable {
         'id': id,
         'downloaded': downloaded,
         'url': url,
+        'batchSize': batchSize,
       };
 
   String serialize() => jsonEncode(toJson());
