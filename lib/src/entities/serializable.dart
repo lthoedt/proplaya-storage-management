@@ -9,7 +9,9 @@ abstract class Serializable<T> {
   final String url;
   bool? downloaded;
   abstract final StorageTypes type;
-  late final Cacher<List<T>> _children;
+
+  /// If this is null then children are not used.
+  late final Cacher<List<T>>? _children;
   int? batchSize;
 
   Serializable({
@@ -18,9 +20,11 @@ abstract class Serializable<T> {
     this.downloaded,
     List<T>? children,
   }) {
-    this._children = Cacher<List<T>>(children);
+    this._children =
+        (getChildren_(this.id) != null) ? Cacher<List<T>>(children) : null;
   }
 
+  /// Downloads the file from the url and saves it to the pathWithName.
   Future<File?>? download(String pathWithName) => null;
 
   Map<String, dynamic> toJson() => {
@@ -30,15 +34,24 @@ abstract class Serializable<T> {
         if (batchSize != null) 'batchSize': batchSize,
       };
 
+  /// Encodes the toJson() map to a json string.
   String serialize() => jsonEncode(toJson());
 
-  List<T>? get children => this._children.value;
+  /// Children getter that returns the value of the cacher.
+  /// If they are not loaded yet, it will return null.
+  List<T>? get children => this._children?.value;
 
+  /// Children getter that loads the children via the cacher.
   Future<List<T>?>? getChildren(
     String id, {
     bool force = false,
   }) =>
-      this._children.get(() => getChildren_(id), force: force);
+      this._children?.get(() => getChildren_(id), force: force);
 
-  Future<List<T>?>? getChildren_(String id);
+  /// @protected
+  ///
+  /// Override this method with a function to fetch the children via for example an API.
+  ///
+  /// Return null if you dont use children.
+  Future<List<T>?>? getChildren_(String id) => null;
 }
