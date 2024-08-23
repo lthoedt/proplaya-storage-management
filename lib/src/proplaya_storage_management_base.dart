@@ -83,8 +83,8 @@ class ProplayaStorageManagement {
 
   /// Downloads the items.
   /// Stores references to those at the parent.
-  Future<bool?> _downloadAsBatch<T extends Serializable>(
-    List<T> items,
+  Future<bool?> _downloadAsBatch(
+    List<dynamic> items,
     Serializable parent,
   ) async {
     final int batchSize = getBatchsizeOf(parent.type);
